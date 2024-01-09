@@ -5,7 +5,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Address } from "../libraries/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import { L1UsdcBridgeStorage } from "./L1UsdcBridgeStorage.sol";
 
 interface ICrossDomainMessenger {
@@ -17,48 +16,20 @@ interface ICrossDomainMessenger {
     ) external payable;
 }
 
+interface IL2USDCBridge {
+     function finalizeERC20Withdrawal(
+        address _l1Token,
+        address _l2Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _extraData
+    ) external;
+}
+
 contract L1UsdcBridge is L1UsdcBridgeStorage {
     using SafeERC20 for IERC20;
-
-    /**
-     * @notice Emitted when an ERC20 bridge is initiated to the other chain.
-     *
-     * @param localToken  Address of the ERC20 on this chain.
-     * @param remoteToken Address of the ERC20 on the remote chain.
-     * @param from        Address of the sender.
-     * @param to          Address of the receiver.
-     * @param amount      Amount of the ERC20 sent.
-     * @param extraData   Extra data sent with the transaction.
-     */
-    event ERC20BridgeInitiated(
-        address indexed localToken,
-        address indexed remoteToken,
-        address indexed from,
-        address to,
-        uint256 amount,
-        bytes extraData
-    );
-
-    /**
-     * @notice Emitted when an ERC20 bridge is finalized on this chain.
-     *
-     * @param localToken  Address of the ERC20 on this chain.
-     * @param remoteToken Address of the ERC20 on the remote chain.
-     * @param from        Address of the sender.
-     * @param to          Address of the receiver.
-     * @param amount      Amount of the ERC20 sent.
-     * @param extraData   Extra data sent with the transaction.
-     */
-    event ERC20BridgeFinalized(
-        address indexed localToken,
-        address indexed remoteToken,
-        address indexed from,
-        address to,
-        uint256 amount,
-        bytes extraData
-    );
-
-    /**
+     /**
      * @notice Only allow EOAs to call the functions. Note that this is not safe against contracts
      *         calling code within their constructors, but also doesn't really matter since we're
      *         just trying to prevent users accidentally depositing with smart contract wallets.
@@ -83,42 +54,71 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
         _;
     }
 
-    modifier onlyL1Usdc(address token) {
-        require(token == l1Usdc, "not L1 usdc");
-        _;
-    }
-
-    modifier onlyL2Usdc(address token) {
-        require(token == l2Usdc, "not L2 usdc");
-        _;
-    }
-
     constructor() {}
 
     /**
-     * @notice Sends ERC20 tokens to the sender's address on the other chain. Note that if the
-     *         ERC20 token on the other chain does not recognize the local token as the correct
-     *         pair token, the ERC20 bridge will fail and the tokens will be returned to sender on
-     *         this chain.
+     * @custom:legacy
+     * @notice Emitted whenever an ERC20 deposit is initiated.
      *
-     * @param _localToken  Address of the ERC20 on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
-     * @param _amount      Amount of local tokens to deposit.
-     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
-     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
-     *                     not be triggered with this data, but it will be emitted and can be used
-     *                     to identify the transaction.
+     * @param l1Token   Address of the token on L1.
+     * @param l2Token   Address of the corresponding token on L2.
+     * @param from      Address of the depositor.
+     * @param to        Address of the recipient on L2.
+     * @param amount    Amount of the ERC20 deposited.
+     * @param extraData Extra data attached to the deposit.
      */
-    function bridgeERC20(
-        address _localToken,
-        address _remoteToken,
+    event ERC20DepositInitiated(
+        address indexed l1Token,
+        address indexed l2Token,
+        address indexed from,
+        address to,
+        uint256 amount,
+        bytes extraData
+    );
+
+    /**
+     * @custom:legacy
+     * @notice Emitted whenever an ERC20 withdrawal is finalized.
+     *
+     * @param l1Token   Address of the token on L1.
+     * @param l2Token   Address of the corresponding token on L2.
+     * @param from      Address of the withdrawer.
+     * @param to        Address of the recipient on L1.
+     * @param amount    Amount of the ERC20 withdrawn.
+     * @param extraData Extra data attached to the withdrawal.
+     */
+    event ERC20WithdrawalFinalized(
+        address indexed l1Token,
+        address indexed l2Token,
+        address indexed from,
+        address to,
+        uint256 amount,
+        bytes extraData
+    );
+
+
+    /**
+     * @custom:legacy
+     * @notice Deposits some amount of ERC20 tokens into the sender's account on L2.
+     *
+     * @param _l1Token     Address of the L1 token being deposited.
+     * @param _l2Token     Address of the corresponding token on L2.
+     * @param _amount      Amount of the ERC20 to deposit.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
+     */
+    function depositERC20(
+        address _l1Token,
+        address _l2Token,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public virtual onlyEOA onlyL1Usdc(_localToken) onlyL2Usdc(_remoteToken) {
-        _initiateBridgeERC20(
-            _localToken,
-            _remoteToken,
+    ) external virtual onlyEOA {
+        _initiateERC20Deposit(
+            _l1Token,
+            _l2Token,
             msg.sender,
             msg.sender,
             _amount,
@@ -128,31 +128,29 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
     }
 
     /**
-     * @notice Sends ERC20 tokens to a receiver's address on the other chain. Note that if the
-     *         ERC20 token on the other chain does not recognize the local token as the correct
-     *         pair token, the ERC20 bridge will fail and the tokens will be returned to sender on
-     *         this chain.
+     * @custom:legacy
+     * @notice Deposits some amount of ERC20 tokens into a target account on L2.
      *
-     * @param _localToken  Address of the ERC20 on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
-     * @param _to          Address of the receiver.
-     * @param _amount      Amount of local tokens to deposit.
-     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
-     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
-     *                     not be triggered with this data, but it will be emitted and can be used
-     *                     to identify the transaction.
+     * @param _l1Token     Address of the L1 token being deposited.
+     * @param _l2Token     Address of the corresponding token on L2.
+     * @param _to          Address of the recipient on L2.
+     * @param _amount      Amount of the ERC20 to deposit.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2. Data supplied here will not be used to
+     *                     execute any code on L2 and is only emitted as extra data for the
+     *                     convenience of off-chain tooling.
      */
-    function bridgeERC20To(
-        address _localToken,
-        address _remoteToken,
+    function depositERC20To(
+        address _l1Token,
+        address _l2Token,
         address _to,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) public virtual onlyL1Usdc(_localToken) onlyL2Usdc(_remoteToken) {
-        _initiateBridgeERC20(
-            _localToken,
-            _remoteToken,
+    ) external virtual  {
+        _initiateERC20Deposit(
+            _l1Token,
+            _l2Token,
             msg.sender,
             _to,
             _amount,
@@ -162,68 +160,75 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
     }
 
     /**
-     * @notice Finalizes an ERC20 bridge on this chain. Can only be triggered by the other
-     *         StandardBridge contract on the remote chain.
+     * @custom:legacy
+     * @notice Finalizes a withdrawal of ERC20 tokens from L2.
      *
-     * @param _localToken  Address of the ERC20 on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
-     * @param _from        Address of the sender.
-     * @param _to          Address of the receiver.
-     * @param _amount      Amount of the ERC20 being bridged.
-     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
-     *                     not be triggered with this data, but it will be emitted and can be used
-     *                     to identify the transaction.
+     * @param _l1Token   Address of the token on L1.
+     * @param _l2Token   Address of the corresponding token on L2.
+     * @param _from      Address of the withdrawer on L2.
+     * @param _to        Address of the recipient on L1.
+     * @param _amount    Amount of the ERC20 to withdraw.
+     * @param _extraData Optional data forwarded from L2.
      */
-    function finalizeBridgeERC20(
-        address _localToken,
-        address _remoteToken,
+    function finalizeERC20Withdrawal(
+        address _l1Token,
+        address _l2Token,
         address _from,
         address _to,
         uint256 _amount,
         bytes calldata _extraData
-    ) public onlyOtherBridge onlyL1Usdc(_localToken) onlyL2Usdc(_remoteToken) {
+    ) external onlyOtherBridge onlyL1Usdc(_l1Token) onlyL2Usdc(_l2Token) {
 
-        deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] - _amount;
-        IERC20(_localToken).safeTransfer(_to, _amount);
-
-        emit ERC20BridgeFinalized(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        deposits[_l1Token][_l2Token] = deposits[_l1Token][_l2Token] - _amount;
+        IERC20(_l1Token).safeTransfer(_to, _amount);
+        emit ERC20WithdrawalFinalized(_l1Token, _l2Token, _from, _to, _amount, _extraData);
     }
+
     /**
-     * @notice Sends ERC20 tokens to a receiver's address on the other chain.
+     * @custom:legacy
+     * @notice Retrieves the access of the corresponding L2 bridge contract.
      *
-     * @param _localToken  Address of the ERC20 on this chain.
-     * @param _remoteToken Address of the corresponding token on the remote chain.
-     * @param _to          Address of the receiver.
-     * @param _amount      Amount of local tokens to deposit.
-     * @param _minGasLimit Minimum amount of gas that the bridge can be relayed with.
-     * @param _extraData   Extra data to be sent with the transaction. Note that the recipient will
-     *                     not be triggered with this data, but it will be emitted and can be used
-     *                     to identify the transaction.
+     * @return Address of the corresponding L2 bridge contract.
      */
-    function _initiateBridgeERC20(
-        address _localToken,
-        address _remoteToken,
+    function l2TokenBridge() external view returns (address) {
+        return address(otherBridge);
+    }
+
+
+    /**
+     * @notice Internal function for initiating an ERC20 deposit.
+     *
+     * @param _l1Token     Address of the L1 token being deposited.
+     * @param _l2Token     Address of the corresponding token on L2.
+     * @param _from        Address of the sender on L1.
+     * @param _to          Address of the recipient on L2.
+     * @param _amount      Amount of the ERC20 to deposit.
+     * @param _minGasLimit Minimum gas limit for the deposit message on L2.
+     * @param _extraData   Optional data to forward to L2.
+     */
+    function _initiateERC20Deposit(
+        address _l1Token,
+        address _l2Token,
         address _from,
         address _to,
         uint256 _amount,
         uint32 _minGasLimit,
         bytes calldata _extraData
-    ) internal {
+    ) internal onlyL1Usdc(_l1Token) onlyL2Usdc(_l2Token) {
+        emit ERC20DepositInitiated(_l1Token, _l2Token, _from, _to, _amount, _extraData);
 
-        IERC20(_localToken).safeTransferFrom(_from, address(this), _amount);
-        deposits[_localToken][_remoteToken] = deposits[_localToken][_remoteToken] + _amount;
-
-        emit ERC20BridgeInitiated(_localToken, _remoteToken, _from, _to, _amount, _extraData);
+        IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        deposits[_l1Token][_l2Token] = deposits[_l1Token][_l2Token] + _amount;
 
         ICrossDomainMessenger(messenger).sendMessage(
             address(otherBridge),
             abi.encodeWithSelector(
-                this.finalizeBridgeERC20.selector,
+                IL2USDCBridge.finalizeERC20Withdrawal.selector,
                 // Because this call will be executed on the remote chain, we reverse the order of
                 // the remote and local token addresses relative to their order in the
                 // finalizeBridgeERC20 function.
-                _remoteToken,
-                _localToken,
+                _l2Token,
+                _l1Token,
                 _from,
                 _to,
                 _amount,
@@ -231,5 +236,7 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
             ),
             _minGasLimit
         );
+
     }
+
 }

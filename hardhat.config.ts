@@ -12,37 +12,9 @@ dotenv.config();
 const config: HardhatUserConfig = {
   namedAccounts: {
     deployer: 0,
-    addr1: 1,
-    addr2: 2,
-    TON: {
-      default: 3,
-      mainnet: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
-      goerli: '0x68c1F9620aeC7F2913430aD6daC1bb16D8444F00',
-      hardhat: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
-      local: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
-    },
-    WTON: {
-      default: 4,
-      mainnet: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
-      goerli: '0xe86fCf5213C785AcF9a8BFfEeDEfA9a2199f7Da6',
-      hardhat: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
-      local: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
-    },
-    TOS: {
-      default: 5,
-      mainnet: '0x409c4D8cd5d2924b9bc5509230d16a61289c8153',
-      goerli: '0x67F3bE272b1913602B191B3A68F7C238A2D81Bb9',
-      hardhat: '0x409c4D8cd5d2924b9bc5509230d16a61289c8153',
-      local: '0x5b40841eeCfB429452AB25216Afc1e1650C07747',
-    },
   },
   networks: {
     hardhat: {
-      forking: {
-        url: `${process.env.ETH_NODE_URI_MAINNET}`,
-        blockNumber: 18811511
-        // blockNumber:18229970
-      },
       allowUnlimitedContractSize: false,
       // deploy: ['deploy-migration']
     },

@@ -1,18 +1,11 @@
-// import {
-//   time,
-//   loadFixture,
-// } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { Signer, BigNumber } from "ethers";
 
 import { ethers, getNamedAccounts, deployments, network} from "hardhat";
 import { Deployment } from "hardhat-deploy/types";
 
-import { readContracts, deployedContracts } from "./common_func"
-
 import { MockL1Messenger } from '../typechain-types/contracts/test/MockL1Messenger.sol'
-import { MockL2Messenger } from '../typechain-types/contracts/test/MockL2Messenger'
+import { MockL2Messenger } from '../typechain-types/contracts/test/MockL2Messenger.sol'
 import { L1UsdcBridge } from '../typechain-types/contracts/L1/L1UsdcBridge.sol'
 import { L1UsdcBridgeProxy } from '../typechain-types/contracts/L1/L1UsdcBridgeProxy'
 import { L2UsdcBridge } from '../typechain-types/contracts/L2/L2UsdcBridge.sol'
@@ -49,10 +42,10 @@ async function deployedContractsFixture(deployed: {[name: string]: Deployment}, 
   const l2UsdcBridge = await ethers.getContractAt("L2UsdcBridge", deployed["L2UsdcBridgeProxy"].address, deployer) as L2UsdcBridge
   const l2UsdcBridgeProxy = await ethers.getContractAt("L2UsdcBridgeProxy", deployed["L2UsdcBridgeProxy"].address, deployer) as L2UsdcBridgeProxy
 
-  const fiatTokenProxy = await ethers.getContractAt(deployed["FiatTokenProxy"].abi, deployed["FiatTokenProxy"].address,  deployer)
-  const fiatTokenV2_2 = await ethers.getContractAt(deployed["FiatTokenV2_2"].abi, deployed["FiatTokenProxy"].address,  deployer)
-  const masterMinter = await ethers.getContractAt(deployed["MasterMinter"].abi, deployed["MasterMinter"].address,  deployer)
-  const signatureChecker = await ethers.getContractAt(deployed["SignatureChecker"].abi, deployed["SignatureChecker"].address,  deployer)
+  const fiatTokenProxy = await ethers.getContractAt(deployed["FiatTokenProxy"].abi, deployed["FiatTokenProxy"].address,  deployer) as FiatTokenProxy
+  const fiatTokenV2_2 = await ethers.getContractAt(deployed["FiatTokenV2_2"].abi, deployed["FiatTokenProxy"].address,  deployer) as FiatTokenV2_2
+  const masterMinter = await ethers.getContractAt(deployed["MasterMinter"].abi, deployed["MasterMinter"].address,  deployer) as MasterMinter
+  const signatureChecker = await ethers.getContractAt(deployed["SignatureChecker"].abi, deployed["SignatureChecker"].address,  deployer) as SignatureChecker
 
   return {
     mockL1Messenger : mockL1Messenger,
@@ -275,14 +268,6 @@ describe("UsdcBridge Test", function () {
   describe('# Withdraw From L2', () => {
 
     it('withdraw', async () => {
-
-      // console.log('accounts.tester', accounts.tester)
-      // console.log('l1UsdcAddress', accounts.l1UsdcAddress)
-      // console.log('L2 usdc ', deployedContracts.fiatTokenProxy.address)
-      // console.log('mockL1Messenger ', deployedContracts.mockL1Messenger.address)
-      // console.log('mockL2Messenger ', deployedContracts.mockL2Messenger.address)
-      // console.log('l1UsdcBridgeProxy ', deployedContracts.l1UsdcBridgeProxy.address)
-
 
       const amount = BigNumber.from("50")
       const minGasLimit = 200000

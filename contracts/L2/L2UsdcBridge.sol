@@ -6,7 +6,8 @@ import { Address } from "../libraries/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { ERC1967Utils } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
-import { StandardBridgeStorage } from "../universal/StandardBridgeStorage.sol";
+import { L2UsdcBridgeStorage } from "./L2UsdcBridgeStorage.sol";
+import "hardhat/console.sol";
 
 interface ICrossDomainMessenger {
     function xDomainMessageSender() external view returns (address) ;
@@ -19,7 +20,10 @@ interface ICrossDomainMessenger {
 
 interface IUSDC {
     function mint(address to, uint256 amount) external;
-    function burn(address to, uint256 amount) external;
+    function burn(uint256 amount) external;
+    function minterAllowance(address minter) external view returns (uint256) ;
+    function balanceOf(address account) external view returns (uint256) ;
+
 }
 
 interface IL1USDCBridge {
@@ -33,7 +37,12 @@ interface IL1USDCBridge {
     ) external;
 }
 
-contract L2UsdcBridge is StandardBridgeStorage {
+interface IMasterMinter {
+    function configureMinter(uint256 _newAllowance) external returns (bool);
+
+}
+
+contract L2UsdcBridge is L2UsdcBridgeStorage {
     using SafeERC20 for IERC20;
 
     /**
@@ -139,6 +148,10 @@ contract L2UsdcBridge is StandardBridgeStorage {
         bytes calldata _extraData
     ) external onlyOtherBridge onlyL1Usdc(_l1Token) onlyL2Usdc(_l2Token) {
 
+        uint256 allowance = IUSDC(_l2Token).minterAllowance(address(this));
+
+        if (allowance < _amount) IMasterMinter(l2UsdcMasterMinter).configureMinter(type(uint256).max);
+
         IUSDC(_l2Token).mint(_to, _amount);
 
         emit DepositFinalized(_l1Token, _l2Token, _from, _to, _amount, _extraData);
@@ -164,10 +177,14 @@ contract L2UsdcBridge is StandardBridgeStorage {
         bytes calldata _extraData
     ) internal onlyL2Usdc(_l2Token) {
 
-        IUSDC(_l2Token).burn(_from, _amount);
+        uint256 allowance = IUSDC(_l2Token).minterAllowance(address(this));
+        if (allowance < _amount) IMasterMinter(l2UsdcMasterMinter).configureMinter(type(uint256).max);
+
+        IERC20(_l2Token).safeTransferFrom(_from, address(this), _amount);
+        IUSDC(_l2Token).burn(_amount);
 
         ICrossDomainMessenger(messenger).sendMessage(
-            address(otherBridge),
+            otherBridge,
             abi.encodeWithSelector(
                 IL1USDCBridge.finalizeERC20Withdrawal.selector,
                 // Because this call will be executed on the remote chain, we reverse the order of

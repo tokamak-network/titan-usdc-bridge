@@ -6,6 +6,7 @@ import { Address } from "../libraries/Address.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { L1UsdcBridgeStorage } from "./L1UsdcBridgeStorage.sol";
+import "hardhat/console.sol";
 
 interface ICrossDomainMessenger {
     function xDomainMessageSender() external view returns (address) ;
@@ -17,7 +18,7 @@ interface ICrossDomainMessenger {
 }
 
 interface IL2USDCBridge {
-     function finalizeERC20Withdrawal(
+     function finalizeDeposit(
         address _l1Token,
         address _l2Token,
         address _from,
@@ -178,7 +179,6 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
         uint256 _amount,
         bytes calldata _extraData
     ) external onlyOtherBridge onlyL1Usdc(_l1Token) onlyL2Usdc(_l2Token) {
-
         deposits[_l1Token][_l2Token] = deposits[_l1Token][_l2Token] - _amount;
         IERC20(_l1Token).safeTransfer(_to, _amount);
         emit ERC20WithdrawalFinalized(_l1Token, _l2Token, _from, _to, _amount, _extraData);
@@ -215,20 +215,16 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
         uint32 _minGasLimit,
         bytes calldata _extraData
     ) internal onlyL1Usdc(_l1Token) onlyL2Usdc(_l2Token) {
-        emit ERC20DepositInitiated(_l1Token, _l2Token, _from, _to, _amount, _extraData);
 
         IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
         deposits[_l1Token][_l2Token] = deposits[_l1Token][_l2Token] + _amount;
 
         ICrossDomainMessenger(messenger).sendMessage(
-            address(otherBridge),
+            otherBridge,
             abi.encodeWithSelector(
-                IL2USDCBridge.finalizeERC20Withdrawal.selector,
-                // Because this call will be executed on the remote chain, we reverse the order of
-                // the remote and local token addresses relative to their order in the
-                // finalizeBridgeERC20 function.
-                _l2Token,
+                IL2USDCBridge.finalizeDeposit.selector,
                 _l1Token,
+                _l2Token,
                 _from,
                 _to,
                 _amount,
@@ -236,6 +232,7 @@ contract L1UsdcBridge is L1UsdcBridgeStorage {
             ),
             _minGasLimit
         );
+         emit ERC20DepositInitiated(_l1Token, _l2Token, _from, _to, _amount, _extraData);
 
     }
 

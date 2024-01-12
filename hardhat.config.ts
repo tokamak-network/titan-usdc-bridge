@@ -1,6 +1,9 @@
 // import { HardhatUserConfig } from "hardhat/config";
+// import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-toolbox";
 import '@typechain/hardhat'
+import '@nomiclabs/hardhat-ethers'
+// import "@nomiclabs/hardhat-waffle";
 
 import "hardhat-gas-reporter";
 import dotenv from "dotenv" ;
@@ -12,42 +15,38 @@ dotenv.config();
 const config: HardhatUserConfig = {
   namedAccounts: {
     deployer: 0,
+    user: 1,
+    l1UsdcAddress: {
+      default: 2,
+      hardhat: '0x693a591A27750eED2A0e14BC73bB1F313116a1cb',
+      localhost: '0x693a591A27750eED2A0e14BC73bB1F313116a1cb',
+    },
+    admin: `privatekey://${process.env.ADMIN_PRIVATE_KEY}`,
+    tester: `privatekey://${process.env.PRIVATE_KEY}`,
   },
   networks: {
     hardhat: {
+      forking: {
+        url: `${process.env.ETH_NODE_URI_sepolia}`,
+        blockNumber: 5063260
+      },
       allowUnlimitedContractSize: false,
-      // deploy: ['deploy-migration']
+      // deploy: ['deploy'],
+      // companionNetworks: {
+      //   l2: 'hardhat',
+      // },
+      chainId: 31337,
     },
-    local: {
-      url: `${process.env.ETH_NODE_URI_localhost}`,
-      timeout: 800000,
-      // accounts: [`${process.env.DEPLOYER}`],
-      // deploy: ['deploy-migration']
+    localhost: {
+      url: 'http://127.0.0.1:8545/',
+      allowUnlimitedContractSize: false,
+      chainId: 31337,
     },
-    mainnet: {
-      url: `${process.env.ETH_NODE_URI_MAINNET}`,
+    opsepolia: {
+      url: `${process.env.ETH_NODE_URI_opsepolia}`,
       accounts: [`${process.env.PRIVATE_KEY}`],
-      gasPrice: 50000000000,
-      // deploy: ['deploy']
-    },
-    goerli: {
-      url: `${process.env.ETH_NODE_URI_goerli}`,
-      accounts: [`${process.env.PRIVATE_KEY}`],
-      chainId: 5,
-      deploy: ['deploy-seig-manager-v1']
-    },
-    titan: {
-      url: `${process.env.ETH_NODE_URI_TITAN}`,
-      accounts: [`${process.env.PRIVATE_KEY}`],
-      chainId: 55004,
-      // gasPrice: 1000000,
-      // deploy: ['deploy_l2_proxy']
-    },
-    titangoerli: {
-      url: `${process.env.ETH_NODE_URI_TITAN_GOERLI}`,
-      accounts: [`${process.env.PRIVATE_KEY}`],
-      chainId: 5050,
-      gasPrice: 250000,
+      chainId: 11155420,
+      // gasPrice: 250000,
       // deploy: ['deploy_l2_proxy']
     },
     sepolia: {
@@ -74,24 +73,15 @@ const config: HardhatUserConfig = {
       mainnet: `${process.env.ETHERSCAN_API_KEY}`,
       goerli: `${process.env.ETHERSCAN_API_KEY}`,
       sepolia: `${process.env.ETHERSCAN_API_KEY}`,
-      titan: "verify",
-      titangoerli: "verify"
+      opsepolia:  `${process.env.ETHERSCAN_API_KEY}`,
     } ,
     customChains: [
       {
-        network: "titan",
-        chainId: 55004,
+        network: "opsepolia",
+        chainId: 11155420,
         urls: {
-          apiURL: "https://explorer.titan.tokamak.network//api",
-          browserURL: "https://explorer.titan.tokamak.network/"
-        }
-      },
-      {
-        network: "titangoerli",
-        chainId: 5050,
-        urls: {
-          apiURL: "https://explorer.titan-goerli.tokamak.network/api",
-          browserURL: "https://explorer.titan-goerli.tokamak.network/"
+          apiURL: "https://sepolia-optimistic.etherscan.io/api",
+          browserURL: "https://sepolia-optimistic.etherscan.io"
         }
       }
     ]
@@ -101,6 +91,16 @@ const config: HardhatUserConfig = {
     currency: 'USD',
     gasPrice: 21,
     coinmarketcap: `${process.env.COINMARKETCAP_API_KEY}`
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
+  typechain: {
+    outDir: "typechain-types",
+    target: "ethers-v5",
   },
   solidity: {
     version: '0.8.20',

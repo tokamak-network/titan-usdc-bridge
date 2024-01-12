@@ -10,7 +10,7 @@ import { L1UsdcBridgeStorage } from "./L1UsdcBridgeStorage.sol";
 contract L1UsdcBridgeProxy is L1UsdcBridgeStorage, ERC1967Proxy {
 
     modifier onlyProxyOwner() {
-        require(msg.sender == owner(), "you are not owner.");
+        require(msg.sender == owner(), "not owner");
         _;
     }
 
@@ -45,7 +45,7 @@ contract L1UsdcBridgeProxy is L1UsdcBridgeStorage, ERC1967Proxy {
         nonZeroAddress(_l2Usdc)
     {
         messenger = _messenger;
-        otherBridge = _messenger;
+        otherBridge = _otherBridge;
         l1Usdc = _l1Usdc;
         l2Usdc = _l2Usdc;
     }

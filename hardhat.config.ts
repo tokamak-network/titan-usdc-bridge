@@ -4,6 +4,8 @@ import "@nomicfoundation/hardhat-toolbox";
 import '@typechain/hardhat'
 import '@nomiclabs/hardhat-ethers'
 // import "@nomiclabs/hardhat-waffle";
+// import "@nomicfoundation/hardhat-verify";
+import "@nomiclabs/hardhat-etherscan";
 
 import "hardhat-gas-reporter";
 import dotenv from "dotenv" ;
@@ -44,14 +46,14 @@ const config: HardhatUserConfig = {
     },
     opsepolia: {
       url: `${process.env.ETH_NODE_URI_opsepolia}`,
-      accounts: [`${process.env.PRIVATE_KEY}`],
+      accounts: [`${process.env.ADMIN_PRIVATE_KEY}`],
       chainId: 11155420,
       // gasPrice: 250000,
       // deploy: ['deploy_l2_proxy']
     },
     sepolia: {
       url: `${process.env.ETH_NODE_URI_sepolia}`,
-      accounts: [`${process.env.PRIVATE_KEY}`],
+      accounts: [`${process.env.ADMIN_PRIVATE_KEY}`],
       // deploy: ['deploy_l2_proxy']
     },
   },
@@ -82,7 +84,7 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://sepolia-optimistic.etherscan.io/api",
           browserURL: "https://sepolia-optimistic.etherscan.io"
-        }
+        },
       }
     ]
   },

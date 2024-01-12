@@ -1,13 +1,19 @@
-# Sample Hardhat Project
+# Bridges for Bridged Usdc
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+It developed the  USDC Bridge that allows the movement of USDC between L1 (Ethereum) and L2 (NewTitan). The bridge follows the BRIDGED USDC standard provided by Circle, and the L2USDCBridge has minting authority of BRIDGED USDC.
 
 Try running some of the following tasks:
 
 ```shell
-npx hardhat help
+npx hardhat install --force
 npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+```
+
+NewTitan deployment is not yet underway.
+Please add additional settings after deployment.
+
+```shell
+npx hardhat deploy --network sepolia --tags l1UsdcBridge
+npx hardhat deploy --network NewTitan --tags l2UsdcBridge
+npx hardhat deploy --network NewTitan --tags usdc
 ```

@@ -11,6 +11,8 @@ node_modules
 /artifacts-usdc/build-info
 /artifacts-usdc/hardhat
 
+/deployments/localhost
+
 # TypeChain files
 /typechain
 /typechain-types

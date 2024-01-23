@@ -7,9 +7,7 @@ node_modules
 /artifacts/build-info
 /artifacts/hardhat
 
-/artifacts-usdc/@openzeppelin
-/artifacts-usdc/build-info
-/artifacts-usdc/hardhat
+/deployments/localhost
 
 /deployments/localhost
 

@@ -17,10 +17,10 @@ const deployUsdc: DeployFunction = async function (hre: HardhatRuntimeEnvironmen
 
     const deploySigner = await hre.ethers.getSigner(deployer);
 
-    let SignatureChecker_AbiInfo = require("../artifacts-usdc/contracts/util/SignatureChecker.sol/SignatureChecker.json")
-    let FiatTokenV2_2_AbiInfo = require("../artifacts-usdc/contracts/v2/FiatTokenV2_2.sol/FiatTokenV2_2.json")
-    let FiatTokenProxy_AbiInfo = require("../artifacts-usdc/contracts/v1/FiatTokenProxy.sol/FiatTokenProxy.json")
-    let MasterMinter_AbiInfo = require("../artifacts-usdc/contracts/minting/MasterMinter.sol/MasterMinter.json")
+    let SignatureChecker_AbiInfo = require("../artifacts-deploy/usdc/contracts/util/SignatureChecker.sol/SignatureChecker.json")
+    let FiatTokenV2_2_AbiInfo = require("../artifacts-deploy/usdc/contracts/v2/FiatTokenV2_2.sol/FiatTokenV2_2.json")
+    let FiatTokenProxy_AbiInfo = require("../artifacts-deploy/usdc/contracts/v1/FiatTokenProxy.sol/FiatTokenProxy.json")
+    let MasterMinter_AbiInfo = require("../artifacts-deploy/usdc/contracts/minting/MasterMinter.sol/MasterMinter.json")
 
     const THROWAWAY_ADDRESS = "0x0000000000000000000000000000000000000001"
 

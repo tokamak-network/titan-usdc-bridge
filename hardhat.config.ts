@@ -1,18 +1,15 @@
-// import { HardhatUserConfig } from "hardhat/config";
-// import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-toolbox";
 import '@typechain/hardhat'
 import '@nomiclabs/hardhat-ethers'
-// import "@nomiclabs/hardhat-waffle";
-// import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-etherscan";
 
 import "hardhat-gas-reporter";
 import dotenv from "dotenv" ;
 import { HardhatUserConfig } from "hardhat/types";
+// import { task } from "hardhat/config";
 import "hardhat-deploy";
-
 dotenv.config();
+import "./tasks/deploy"
 
 const config: HardhatUserConfig = {
   namedAccounts: {
@@ -29,7 +26,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: `${process.env.ETH_NODE_URI_sepolia}`,
+        url: `${process.env.ETH_NODE_URI_SEPOLIA}`,
         blockNumber: 5063260
       },
       allowUnlimitedContractSize: false,
@@ -44,17 +41,19 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: false,
       chainId: 31337,
     },
+    titansepolia: {
+      url: `${process.env.ETH_NODE_URI_TITAN_SEPOLIA}`,
+      accounts: [`${process.env.ADMIN_PRIVATE_KEY}`],
+      chainId: 111551115050
+    },
     opsepolia: {
       url: `${process.env.ETH_NODE_URI_opsepolia}`,
       accounts: [`${process.env.ADMIN_PRIVATE_KEY}`],
-      chainId: 11155420,
-      // gasPrice: 250000,
-      // deploy: ['deploy_l2_proxy']
+      chainId: 11155420
     },
     sepolia: {
       url: `${process.env.ETH_NODE_URI_sepolia}`,
-      accounts: [`${process.env.ADMIN_PRIVATE_KEY}`],
-      // deploy: ['deploy_l2_proxy']
+      accounts: [`${process.env.ADMIN_PRIVATE_KEY}`]
     },
   },
   deterministicDeployment: (network: string) => {

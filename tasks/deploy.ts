@@ -29,25 +29,41 @@ task("ton-and-tos-deploy", "Deploy the ton and tos")
 });
 
 
-task("l1-usdc-bridge-deploy", "Deploy the usdc bridge of L1").setAction(async (args, hre) => {
-    const [actor] = await hre.ethers.getSigners();
-    const contracts = await UsdcBridgeDeployer.deployL1Bridge(actor);
+task("l1-usdc-bridge-deploy", "Deploy the usdc bridge of L1")
+    .addOptionalParam("adminAddress", "Admin Address")
+    .addOptionalParam("outputType", "Output type")
+    .setAction(async (args, hre) => {
 
-    const table = new Table({
-        head: ["Contract", "Address"],
-        style: { border: [] },
-    });
+        const [actor] = await hre.ethers.getSigners();
+        const contracts = await UsdcBridgeDeployer.deployL1Bridge(actor);
 
-    for (const item of Object.keys(contracts)) {
-    table.push([item, contracts[item].address]);
-    }
-    console.info(table.toString());
+        if (args.adminAddress != null && args.adminAddress != undefined && args.adminAddress.length == 42
+            && args.adminAddress.toLocaleLowerCase() != actor.address.toLocaleLowerCase()) {
+                await (await contracts.L1UsdcBridgeProxy.connect(actor).proxyChangeOwner(args.adminAddress)).wait()
+        }
 
-    if (hre.network.name != "hardhat" && hre.network.name != "localhost") {
-        await hre.run("etherscan-verify", {
-            network: hre.network.name
-        });
-    }
+        if (hre.network.name != "hardhat" && hre.network.name != "localhost") {
+            await hre.run("etherscan-verify", {
+                network: hre.network.name
+            });
+        }
+
+        if(args.outputType == "json") {
+            const table = {}
+            for (const item of Object.keys(contracts)) {
+                table[item] = contracts[item].address;
+            }
+            console.info(table);
+        } else {
+            const table = new Table({
+                head: ["Contract", "Address"],
+                style: { border: [] },
+            });
+            for (const item of Object.keys(contracts)) {
+            table.push([item, contracts[item].address]);
+            }
+            console.info(table.toString());
+        }
 });
 
 task("l2-usdc-bridge-deploy", "Deploy the usdc bridge of L2").setAction(async (args, hre) => {
@@ -72,7 +88,7 @@ task("l2-usdc-bridge-deploy", "Deploy the usdc bridge of L2").setAction(async (a
     }
 });
 
-task("bridged-usdc-deploy", "Deploy the bridged usdc")
+task("usdc-deploy", "Deploy the bridged usdc")
     .addParam("adminAddress", "Admin Address")
     .setAction(async (args, hre) => {
         const [actor] = await hre.ethers.getSigners();
@@ -168,7 +184,30 @@ task("l2-usdc-and-bridge-deploy", "Deploy USDC and the usdc bridge for L2")
             }
             console.info(table.toString());
         }
+});
 
+
+task("set-l1-usdc-bridge", "Set L1 USDC Bridge")
+    .addParam("l1CrossDomainMessenger", "L1 CrossDomainMessenger Address")
+    .addParam("l1UsdcAddress", "L1 Usdc Address")
+    .addParam("l2UsdcAddress", "L2 Usdc Address")
+    .addParam("l1UsdcBridgeAddress", "L1 Usdc Bridge Address")
+    .addParam("l2UsdcBridgeAddress", "L2 Usdc Bridge Address")
+    .setAction(async (args, hre) => {
+        const [actor] = await hre.ethers.getSigners();
+
+        // const L2CrossDomainMessenger = "0x4200000000000000000000000000000000000007"
+
+        const contract = await UsdcBridgeDeployer.setL1Bridge(
+            actor,
+            args.l1CrossDomainMessenger,
+            args.l1UsdcAddress,
+            args.l2UsdcAddress,
+            args.l1UsdcBridgeAddress,
+            args.l2UsdcBridgeAddress
+            );
+
+        console.info('set-l1-usdc-bridge  done')
 });
 
 

@@ -9,7 +9,6 @@ node_modules
 
 /deployments/localhost
 
-/deployments/localhost
 
 # TypeChain files
 /typechain

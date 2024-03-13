@@ -27,7 +27,45 @@ export class UsdcBridgeDeployer {
       this.deployer = deployer;
     }
 
-    static async deployL1Bridge(actor: Signer): Promise<{ [name: string]: Contract }> {
+    static async setL1Bridge(
+      actor: Signer,
+      l1CrossDomainMessenger: string,
+      l1UsdcAddress: string,
+      l2UsdcAddress: string,
+      l1UsdcBridgeAddress: string,
+      l2UsdcBridgeAddress: string,
+    ): Promise<{ [name: string]: Contract }> {
+      const deployer = new UsdcBridgeDeployer(actor);
+
+      const L1UsdcBridgeProxy = await hre.ethers.getContractAt(artifacts.L1UsdcBridgeProxy.abi,l1UsdcBridgeAddress, actor)
+
+      let l1Messenger = await L1UsdcBridgeProxy.messenger()
+      let otherBridge = await L1UsdcBridgeProxy.otherBridge()
+      let l1Usdc = await L1UsdcBridgeProxy.l1Usdc()
+      let l2Usdc = await L1UsdcBridgeProxy.l2Usdc()
+
+      if (l1Messenger.toLocaleLowerCase() != l1CrossDomainMessenger.toLocaleLowerCase()
+          || otherBridge.toLocaleLowerCase() != l2UsdcBridgeAddress.toLocaleLowerCase()
+          || l1Usdc.toLocaleLowerCase() != l1UsdcAddress.toLocaleLowerCase()
+          || l2Usdc.toLocaleLowerCase() != l2UsdcAddress.toLocaleLowerCase()
+        ) {
+          await (await L1UsdcBridgeProxy.connect(actor).setAddress(
+            l1CrossDomainMessenger,
+            l2UsdcBridgeAddress,
+            l1UsdcAddress,
+            l2UsdcAddress
+          )).wait()
+        }
+
+      return {
+        L1UsdcBridgeProxy
+      };
+    }
+
+
+    static async deployL1Bridge(
+      actor: Signer
+    ): Promise<{ [name: string]: Contract }> {
       const deployer = new UsdcBridgeDeployer(actor);
 
       const L1UsdcBridge = await deployer.deployL1UsdcBridge();
